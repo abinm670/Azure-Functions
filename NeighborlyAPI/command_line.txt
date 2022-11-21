@@ -1,0 +1,108 @@
+/Users/apple/.config .
+
+lsof -i -P | grep LISTEN | grep :$PORT
+az acr show --name $containerRegistry --query loginServer --output table
+
+login to docker with azure:
+docker login $containerRegistry.azurecr.io
+
+%%%%%%% az group delete --name
+
+
+# Function App needs a storage account
+az storage account create --name $storageAccount --location $region --resource-group $resourceGroup --sku Standard_LRS
+ 
+# Create a Function App
+az functionapp create --name $functionApp  --storage-account $storageAccount --consumption-plan-location $region  --resource-group $resourceGroup --functions-version 3 --os-type Linux --runtime python
+# Deploy local Function to Function App
+func azure functionapp publish $functionApp
+
+
+
+{
+"IsEncrypted": false,
+"Values": {
+ "AzureWebJobsStorage": "xxxxxxxxxx",
+ "FUNCTIONS_WORKER_RUNTIME": "python",
+ "FUNCTIONS_EXTENSION_VERSION": "~4",
+ "MyDbConnection": "xxxxxxxxxx",
+ "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "xxxxxxxxxx",
+ "WEBSITE_CONTENTSHARE":"xxxxxxxxxx"
+}
+}
+
+"connection":"MyDbConnection"
+
+
+/// # Needs `az login`
+# Run this command from the function root directory - LocalAzureFuncProject
+func azure functionapp publish $functionApp
+
+az functionapp config appsettings set \
+--name $functionApp \
+--resource-group $resourceGroup \
+--setting MyDbConnection=$connectionString
+
+
+
+az webapp up \
+--resource-group $resourceGroup \
+--name mru \
+--service-objective Basic \
+--verbose
+
+
+****Create docker file:
+func init --docker-only --python
+
+Next create an image where you are exist
+docker build -t $imageName:$imageTag .
+
+test the image:
+docker run -p 7071:7071 -it $imageName:$imageTag
+
+
+az acr create --resource-group $resourceGroup --name $containerRegistry --sku Basic
+
+
+view container registery:
+az acr show --name $containerRegistry --query loginServer --output table
+
+
+# Tag the image with the same name as the ACR respository, else, the push will fail.
+# SYNTAX 
+# docker tag <name:tag> <ACR-respository>.azurecr.io/<name:tag>
+docker tag $imageName:$imageTag $containerRegistry.azurecr.io/$imageName:$imageTag
+
+
+
+
+
+
+# Go to Container Registry >> Settings >> Access Keys and enable the Admin user. 
+# Use those credentials to login from your terminal. 
+docker login $containerRegistry.azurecr.io
+docker push $containerRegistry.azurecr.io/$imageName:$imageTag
+# View the newly pushed image in the ACR respository
+az acr repository list --name $containerRegistry --output table
+
+
+Cluster
+az aks create \
+--name $AKSCluster \
+--resource-group $resourceGroup \
+--node-count 2 \
+--generate-ssh-keys \
+--attach-acr $containerRegistry \
+--location $region
+
+# Get credentials for your container service
+az aks get-credentials \
+  --name $AKSCluster \
+  --resource-group $resourceGroup
+
+  Part 4: Deploy the App to Kubernetes:
+  func kubernetes deploy \
+--name $functionApp \
+--registry $containerRegistry \
+[--dry-run > deploy.yml]
